@@ -3,7 +3,7 @@ const multer = require("multer");
 const { uploadImage } = require("../controllers/uploadController");
 
 const router = express.Router();
-const upload = multer(); // memory storage, no files saved locally
+const upload = multer(); // memory storage (Vercel safe)
 
 router.post("/", upload.single("image"), uploadImage);
 

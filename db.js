@@ -1,29 +1,11 @@
 // db.js
-const mysql = require("mysql2");
+import pkg from "pg";
+const { Pool } = pkg;
 
-let pool;
+// Supabase PostgreSQL connection
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL, // set in Vercel env vars
+  ssl: { rejectUnauthorized: false },         // required for Vercel + Supabase
+});
 
-// Create pool once (serverless-safe)
-if (!pool) {
-  pool = mysql.createPool({
-    uri: process.env.DATABASE_URL, // Railway MySQL connection URL
-    waitForConnections: true,
-    connectionLimit: 10,
-    queueLimit: 0,
-  }).promise();
-}
-
-// Optional: connection test ONLY in development
-if (process.env.NODE_ENV !== "production") {
-  pool
-    .getConnection()
-    .then((connection) => {
-      console.log("✅ Railway MySQL Connected");
-      connection.release();
-    })
-    .catch((err) => {
-      console.error("❌ DB Connection Failed:", err.message);
-    });
-}
-
-module.exports = pool;
+export default pool;

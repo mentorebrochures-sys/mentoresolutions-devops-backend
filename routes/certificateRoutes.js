@@ -1,13 +1,6 @@
 const express = require("express");
 const router = express.Router();
 
-/*
-  ⚠️ Important Notes:
-  - Multer वापरत नाही (Vercel filesystem read-only आहे)
-  - Image upload ImgBB वर frontend कडून होतो
-  - Backend ला फक्त image URL मिळतो (string)
-*/
-
 const certificateController = require("../controllers/certificateController");
 
 // ================= CERTIFICATE ROUTES =================

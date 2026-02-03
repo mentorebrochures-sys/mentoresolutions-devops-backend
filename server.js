@@ -4,10 +4,10 @@ require("dotenv").config();
 
 // Routes
 const trainingRoutes = require("./routes/trainingRoutes");
-const certificateRoutes = require("./routes/certificateRoutes");
-const placementRoutes = require("./routes/placementRoutes");
 const courseRoutes = require("./routes/courseRoutes");
+const placementRoutes = require("./routes/placementRoutes");
 const contactRoutes = require("./routes/contactRoutes");
+const certificateRoutes = require("./routes/certificateRoutes");
 const uploadRoutes = require("./routes/uploadRoutes");
 
 const app = express();
@@ -19,18 +19,26 @@ app.use(express.urlencoded({ extended: true }));
 
 // ================= API ROUTES =================
 app.use("/api/trainings", trainingRoutes);
-app.use("/api/certificates", certificateRoutes);
-app.use("/api/placements", placementRoutes);
 app.use("/api/courses", courseRoutes);
+app.use("/api/placements", placementRoutes);
 app.use("/api/contacts", contactRoutes);
+app.use("/api/certificates", certificateRoutes);
 app.use("/api/upload", uploadRoutes);
 
 // ================= HEALTH CHECK =================
 app.get("/", (req, res) => {
-  res.send("Backend is running 🚀");
+  res.send("Supabase Backend running 🚀");
 });
 
-// ❌ DO NOT use app.listen() on Vercel
+// ❌ Do not use app.listen() on Vercel
 
-// ✅ Export app for Vercel serverless
+// ✅ Export app for serverless
 module.exports = app;
+
+// if (process.env.NODE_ENV !== "production") {
+//   const PORT = process.env.PORT || 3000;
+//   app.listen(PORT, () => {
+//     console.log(`Server running locally at http://localhost:${PORT}`);
+//   });
+// }
+

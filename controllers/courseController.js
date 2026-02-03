@@ -1,62 +1,29 @@
-const db = require("../db");
+const supabase = require("../supabaseClient");
 
-// ===============================
-// GET ALL COURSES
-// ===============================
-exports.getCourses = (req, res) => {
-  db.query("SELECT * FROM courses ORDER BY id DESC", (err, rows) => {
-    if (err) return res.status(500).json(err);
-    res.json(rows);
-  });
+exports.getCourses = async (req, res) => {
+  const { data, error } = await supabase.from("courses").select("*").order("id", { ascending: false });
+  if (error) return res.status(500).json({ message: error.message });
+  res.json(data);
 };
 
-// ===============================
-// ADD COURSE
-// ===============================
-exports.addCourse = (req, res) => {
+exports.addCourse = async (req, res) => {
   const { duration, startDate } = req.body;
-
-  if (!duration || !startDate) {
-    return res.status(400).json({ message: "Duration and Start Date required" });
-  }
-
-  const sql = "INSERT INTO courses (duration, start_date) VALUES (?, ?)";
-
-  db.query(sql, [duration, startDate], (err, result) => {
-    if (err) return res.status(500).json(err);
-
-    res.status(201).json({
-      id: result.insertId,
-      duration,
-      startDate
-    });
-  });
+  const { data, error } = await supabase.from("courses").insert([{ duration, start_date: startDate }]);
+  if (error) return res.status(500).json({ message: error.message });
+  res.status(201).json(data[0]);
 };
 
-// ===============================
-// UPDATE COURSE
-// ===============================
-exports.updateCourse = (req, res) => {
+exports.updateCourse = async (req, res) => {
   const { id } = req.params;
   const { duration, startDate } = req.body;
-
-  const sql =
-    "UPDATE courses SET duration = ?, start_date = ? WHERE id = ?";
-
-  db.query(sql, [duration, startDate, id], (err) => {
-    if (err) return res.status(500).json(err);
-    res.json({ message: "Course updated" });
-  });
+  const { data, error } = await supabase.from("courses").update({ duration, start_date: startDate }).eq("id", id);
+  if (error) return res.status(500).json({ message: error.message });
+  res.json(data[0] || { message: "Not found" });
 };
 
-// ===============================
-// DELETE COURSE
-// ===============================
-exports.deleteCourse = (req, res) => {
+exports.deleteCourse = async (req, res) => {
   const { id } = req.params;
-
-  db.query("DELETE FROM courses WHERE id = ?", [id], (err) => {
-    if (err) return res.status(500).json(err);
-    res.json({ message: "Course deleted" });
-  });
+  const { data, error } = await supabase.from("courses").delete().eq("id", id);
+  if (error) return res.status(500).json({ message: error.message });
+  res.json({ message: "Deleted successfully" });
 };

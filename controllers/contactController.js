@@ -1,46 +1,29 @@
-const db = require("../db");
+const supabase = require("../supabaseClient");
 
-// ================= GET =================
-exports.getContacts = (req, res) => {
-  db.query("SELECT * FROM contacts ORDER BY id ASC", (err, rows) => {
-    if (err) return res.status(500).json(err);
-    res.json(rows);
-  });
+exports.getContacts = async (req, res) => {
+  const { data, error } = await supabase.from("contacts").select("*").order("id", { ascending: true });
+  if (error) return res.status(500).json({ message: error.message });
+  res.json(data);
 };
 
-// ================= ADD =================
-exports.addContact = (req, res) => {
+exports.addContact = async (req, res) => {
   const { email, mobile, instagram, linkedin } = req.body;
-
-  const sql =
-    "INSERT INTO contacts (email, mobile, instagram, linkedin) VALUES (?,?,?,?)";
-
-  db.query(sql, [email, mobile, instagram, linkedin], (err, result) => {
-    if (err) return res.status(500).json(err);
-    res.json({ id: result.insertId });
-  });
+  const { data, error } = await supabase.from("contacts").insert([{ email, mobile, instagram, linkedin }]);
+  if (error) return res.status(500).json({ message: error.message });
+  res.status(201).json(data[0]);
 };
 
-// ================= UPDATE =================
-exports.updateContact = (req, res) => {
+exports.updateContact = async (req, res) => {
   const { id } = req.params;
   const { email, mobile, instagram, linkedin } = req.body;
-
-  const sql =
-    "UPDATE contacts SET email=?, mobile=?, instagram=?, linkedin=? WHERE id=?";
-
-  db.query(sql, [email, mobile, instagram, linkedin, id], err => {
-    if (err) return res.status(500).json(err);
-    res.json({ message: "Updated" });
-  });
+  const { data, error } = await supabase.from("contacts").update({ email, mobile, instagram, linkedin }).eq("id", id);
+  if (error) return res.status(500).json({ message: error.message });
+  res.json(data[0] || { message: "Not found" });
 };
 
-// ================= DELETE =================
-exports.deleteContact = (req, res) => {
+exports.deleteContact = async (req, res) => {
   const { id } = req.params;
-
-  db.query("DELETE FROM contacts WHERE id=?", [id], err => {
-    if (err) return res.status(500).json(err);
-    res.json({ message: "Deleted" });
-  });
+  const { data, error } = await supabase.from("contacts").delete().eq("id", id);
+  if (error) return res.status(500).json({ message: error.message });
+  res.json({ message: "Deleted successfully" });
 };

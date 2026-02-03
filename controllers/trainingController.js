@@ -1,53 +1,49 @@
-const db = require("../db");
+const supabase = require("../supabaseClient");
 
-// ================= GET ALL TRAININGS =================
-exports.getTrainings = (req, res) => {
-  const sql = "SELECT * FROM trainings ORDER BY id ASC";
-  db.query(sql, (err, results) => {
-    if (err) return res.status(500).json(err);
-    res.json(results);
-  });
-};
-
-// ================= ADD TRAINING =================
-exports.addTraining = (req, res) => {
-  const { icon, name } = req.body;
-
-  if (!icon || !name) {
-    return res.status(400).json({ message: "icon or name missing" });
+exports.getTrainings = async (req, res) => {
+  try {
+    const { data, error } = await supabase.from("trainings").select("*").order("id", { ascending: true });
+    if (error) throw error;
+    res.json(data);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Database error" });
   }
-
-  const sql = "INSERT INTO trainings (icon, name) VALUES (?, ?)";
-  db.query(sql, [icon, name], (err, result) => {
-    if (err) return res.status(500).json(err);
-
-    res.json({
-      id: result.insertId,
-      icon,
-      name,
-    });
-  });
 };
 
-// ================= UPDATE TRAINING =================
-exports.updateTraining = (req, res) => {
-  const { id } = req.params;
-  const { icon, name } = req.body;
-
-  const sql = "UPDATE trainings SET icon=?, name=? WHERE id=?";
-  db.query(sql, [icon, name, id], err => {
-    if (err) return res.status(500).json(err);
-    res.json({ message: "Training updated" });
-  });
+exports.addTraining = async (req, res) => {
+  try {
+    const { icon, name } = req.body;
+    const { data, error } = await supabase.from("trainings").insert([{ icon, name }]);
+    if (error) throw error;
+    res.status(201).json(data[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Database error" });
+  }
 };
 
-// ================= DELETE TRAINING =================
-exports.deleteTraining = (req, res) => {
-  const { id } = req.params;
+exports.updateTraining = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { icon, name } = req.body;
+    const { data, error } = await supabase.from("trainings").update({ icon, name }).eq("id", id);
+    if (error) throw error;
+    res.json(data[0] || { message: "Not found" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Database error" });
+  }
+};
 
-  const sql = "DELETE FROM trainings WHERE id=?";
-  db.query(sql, [id], err => {
-    if (err) return res.status(500).json(err);
-    res.json({ message: "Training deleted" });
-  });
+exports.deleteTraining = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { data, error } = await supabase.from("trainings").delete().eq("id", id);
+    if (error) throw error;
+    res.json({ message: "Deleted successfully" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Database error" });
+  }
 };
