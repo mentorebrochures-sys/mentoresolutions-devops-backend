@@ -1,3 +1,4 @@
+// routes/certificateRoutes.js
 const express = require("express");
 const upload = require("../multer");
 const controller = require("../controllers/certificateController");
