@@ -1,7 +1,8 @@
 const express = require("express");
 const cors = require("cors");
+require("dotenv").config();
 
-// Routes
+// ================= ROUTES =================
 const trainingRoutes = require("./routes/trainingRoutes");
 const courseRoutes = require("./routes/courseRoutes");
 const placementRoutes = require("./routes/placementRoutes");
@@ -10,22 +11,25 @@ const certificateRoutes = require("./routes/certificateRoutes");
 
 const app = express();
 
-// Middleware
+// ================= MIDDLEWARE =================
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// API Routes
+// ================= API ROUTES =================
 app.use("/api/trainings", trainingRoutes);
 app.use("/api/courses", courseRoutes);
 app.use("/api/placements", placementRoutes);
 app.use("/api/contacts", contactRoutes);
 app.use("/api/certificates", certificateRoutes);
 
-// Health check
+// ================= HEALTH CHECK =================
 app.get("/", (req, res) => {
   res.send("Supabase Backend running 🚀");
 });
 
-// Serverless export
+// ❌ Vercel वर app.listen() वापरायचं नाही
+// ✅ serverless साठी app export करायचं
 module.exports = app;
+
+
