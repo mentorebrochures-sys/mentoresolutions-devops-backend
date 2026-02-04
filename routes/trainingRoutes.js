@@ -1,16 +1,8 @@
-const express = require("express");
-const router = express.Router();
+const router = require('express').Router();
+const trainCtrl = require('../controllers/trainingController');
+const upload = require('../multer');
 
-const {
-  getTrainings,
-  addTraining,
-  updateTraining,
-  deleteTraining
-} = require("../controllers/trainingController");
-
-router.get("/", getTrainings);
-router.post("/", addTraining);
-router.put("/:id", updateTraining);
-router.delete("/:id", deleteTraining);
-
+router.get('/', trainCtrl.getAll);
+router.post('/', upload.single('icon'), trainCtrl.create);
+router.delete('/:id', trainCtrl.delete);
 module.exports = router;

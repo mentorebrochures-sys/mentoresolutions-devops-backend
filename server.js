@@ -1,35 +1,31 @@
-const express = require("express");
-const cors = require("cors");
-require("dotenv").config();
-
-// ================= ROUTES =================
-const trainingRoutes = require("./routes/trainingRoutes");
-const courseRoutes = require("./routes/courseRoutes");
-const placementRoutes = require("./routes/placementRoutes");
-const contactRoutes = require("./routes/contactRoutes");
-const certificateRoutes = require("./routes/certificateRoutes");
+const express = require('express');
+const cors = require('cors');
+require('dotenv').config();
 
 const app = express();
 
-// ================= MIDDLEWARE =================
+// Middlewares
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// ================= API ROUTES =================
-app.use("/api/trainings", trainingRoutes);
-app.use("/api/courses", courseRoutes);
-app.use("/api/placements", placementRoutes);
-app.use("/api/contacts", contactRoutes);
-app.use("/api/certificates", certificateRoutes);
+// Routes Import
+app.use('/api/certificates', require('./routes/certificateRoutes'));
+app.use('/api/contacts', require('./routes/contactRoutes'));
+app.use('/api/courses', require('./routes/courseRoutes'));
+app.use('/api/placements', require('./routes/placementRoutes'));
+app.use('/api/trainings', require('./routes/trainingRoutes'));
 
-// ================= HEALTH CHECK =================
-app.get("/", (req, res) => {
-  res.send("Supabase Backend running 🚀");
+// Root route
+app.get('/', (req, res) => {
+  res.status(200).json({ message: "Mentore Solutions API is live!" });
 });
 
-// ❌ Vercel वर app.listen() वापरायचं नाही
-// ✅ serverless साठी app export करायचं
+// लोकलवर रन होण्यासाठी (Vercel हे आपोआप दुर्लक्षित करेल)
+if (process.env.NODE_ENV !== 'production') {
+  const PORT = process.env.PORT || 5000;
+  app.listen(PORT, () => console.log(`🚀 Local server on port ${PORT}`));
+}
+
+// Vercel साठी export करणे अनिवार्य आहे
 module.exports = app;
-
-

@@ -1,77 +1,22 @@
-const supabase = require("../supabaseClient");
+const supabase = require('../supabaseClient');
 
-exports.getTrainings = async (req, res) => {
-  try {
-    const { data, error } = await supabase
-      .from("trainings")
-      .select("*")
-      .order("id", { ascending: true });
-
-    if (error) throw error;
-    res.json(data);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Database error" });
-  }
+exports.getAll = async (req, res) => {
+    const { data, error } = await supabase.from('trainings').select('*');
+    res.json(error ? { error: error.message } : data);
 };
 
-exports.addTraining = async (req, res) => {
-  try {
-    const { icon, name } = req.body;
+exports.create = async (req, res) => {
+    try {
+        const fileName = `icon_${Date.now()}`;
+        await supabase.storage.from(process.env.TRAINING_BUCKET).upload(fileName, req.file.buffer);
+        const { data: url } = supabase.storage.from(process.env.TRAINING_BUCKET).getPublicUrl(fileName);
 
-    if (!icon || !name) {
-      return res.status(400).json({ message: "Icon and name are required" });
-    }
-
-    const { data, error } = await supabase
-      .from("trainings")
-      .insert([{ icon, name }])
-      .select();
-
-    if (error) throw error;
-    res.status(201).json(data[0]);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Database error" });
-  }
+        const { data, error } = await supabase.from('trainings').insert([{ name: req.body.name, icon: url.publicUrl }]);
+        res.status(201).json(error ? { error: error.message } : data);
+    } catch (err) { res.status(500).json({ error: err.message }); }
 };
 
-exports.updateTraining = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { icon, name } = req.body;
-
-    if (!icon || !name) {
-      return res.status(400).json({ message: "Icon and name are required" });
-    }
-
-    const { data, error } = await supabase
-      .from("trainings")
-      .update({ icon, name })
-      .eq("id", id)
-      .select();
-
-    if (error) throw error;
-    res.json(data[0] || { message: "Not found" });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Database error" });
-  }
-};
-
-exports.deleteTraining = async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const { error } = await supabase
-      .from("trainings")
-      .delete()
-      .eq("id", id);
-
-    if (error) throw error;
-    res.json({ message: "Deleted successfully" });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Database error" });
-  }
+exports.delete = async (req, res) => {
+    await supabase.from('trainings').delete().eq('id', req.params.id);
+    res.json({ message: "Deleted" });
 };

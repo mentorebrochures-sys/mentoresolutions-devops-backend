@@ -1,86 +1,21 @@
-const supabase = require("../supabaseClient");
+const supabase = require('../supabaseClient');
 
-exports.getCourses = async (req, res) => {
-  const { data, error } = await supabase.from("courses").select("*").order("id", { ascending: false });
-  if (error) return res.status(500).json({ message: error.message });
-  res.json(data);
+exports.getAll = async (req, res) => {
+    const { data, error } = await supabase.from('courses').select('*');
+    res.json(error ? { error: error.message } : data);
 };
 
-exports.addCourse = async (req, res) => {
-  const { duration, startDate } = req.body;
-  const { data, error } = await supabase.from("courses").insert([{ duration, start_date: startDate }]);
-  if (error) return res.status(500).json({ message: error.message });
-  res.status(201).json(data[0]);
+exports.create = async (req, res) => {
+    const { data, error } = await supabase.from('courses').insert([req.body]);
+    res.status(201).json(error ? { error: error.message } : data);
 };
 
-exports.updateCourse = async (req, res) => {
-  const { id } = req.params;
-  const { duration, startDate } = req.body;
-  const { data, error } = await supabase.from("courses").update({ duration, start_date: startDate }).eq("id", id);
-  if (error) return res.status(500).json({ message: error.message });
-  res.json(data[0] || { message: "Not found" });
-};const supabase = require("../supabaseClient");
-
-exports.getCourses = async (req, res) => {
-  const { data, error } = await supabase
-    .from("courses")
-    .select("*")
-    .order("id", { ascending: false });
-
-  if (error) return res.status(500).json({ message: error.message });
-  res.json(data);
+exports.update = async (req, res) => {
+    const { data, error } = await supabase.from('courses').update(req.body).eq('id', req.params.id);
+    res.json(error ? { error: error.message } : data);
 };
 
-exports.addCourse = async (req, res) => {
-  const { duration, startDate } = req.body;
-
-  if (!duration || !startDate) {
-    return res.status(400).json({ message: "Duration and start date are required" });
-  }
-
-  const { data, error } = await supabase
-    .from("courses")
-    .insert([{ duration, start_date: startDate }])
-    .select();
-
-  if (error) return res.status(500).json({ message: error.message });
-  res.status(201).json(data[0]);
-};
-
-exports.updateCourse = async (req, res) => {
-  const { id } = req.params;
-  const { duration, startDate } = req.body;
-
-  if (!duration || !startDate) {
-    return res.status(400).json({ message: "Duration and start date are required" });
-  }
-
-  const { data, error } = await supabase
-    .from("courses")
-    .update({ duration, start_date: startDate })
-    .eq("id", id)
-    .select();
-
-  if (error) return res.status(500).json({ message: error.message });
-  res.json(data[0] || { message: "Not found" });
-};
-
-exports.deleteCourse = async (req, res) => {
-  const { id } = req.params;
-
-  const { error } = await supabase
-    .from("courses")
-    .delete()
-    .eq("id", id);
-
-  if (error) return res.status(500).json({ message: error.message });
-  res.json({ message: "Deleted successfully" });
-};
-
-
-exports.deleteCourse = async (req, res) => {
-  const { id } = req.params;
-  const { data, error } = await supabase.from("courses").delete().eq("id", id);
-  if (error) return res.status(500).json({ message: error.message });
-  res.json({ message: "Deleted successfully" });
+exports.delete = async (req, res) => {
+    await supabase.from('courses').delete().eq('id', req.params.id);
+    res.json({ message: "Course Deleted" });
 };

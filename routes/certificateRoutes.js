@@ -1,13 +1,8 @@
-const express = require("express");
-const upload = require("../multer");
-const controller = require("../controllers/certificateController");
+const router = require('express').Router();
+const certCtrl = require('../controllers/certificateController');
+const upload = require('../multer');
 
-const router = express.Router();
-
-router.post("/upload", upload.single("image"), controller.uploadCertificateImage);
-router.get("/", controller.getCertificates);
-router.post("/", controller.addCertificate);
-router.put("/:id", controller.updateCertificate);
-router.delete("/:id", controller.deleteCertificate);
-
+router.get('/', certCtrl.getAll);
+router.post('/', upload.single('image'), certCtrl.create);
+router.delete('/:id', certCtrl.delete);
 module.exports = router;

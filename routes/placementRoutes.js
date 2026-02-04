@@ -1,20 +1,9 @@
-const express = require("express");
-const upload = require("../multer");
-const controller = require("../controllers/placementController");
+const router = require('express').Router();
+const placeCtrl = require('../controllers/placementController');
+const upload = require('../multer');
 
-const router = express.Router();
-
-// IMAGE UPLOAD
-router.post(
-  "/upload",
-  upload.single("image"),
-  controller.uploadPlacementImage
-);
-
-// CRUD ROUTES
-router.get("/", controller.getPlacements);
-router.post("/", controller.addPlacement);
-router.put("/:id", controller.updatePlacement);
-router.delete("/:id", controller.deletePlacement);
-
+router.get('/', placeCtrl.getAll);
+router.post('/', upload.single('image'), placeCtrl.create);
+router.put('/:id', placeCtrl.update);
+router.delete('/:id', placeCtrl.delete);
 module.exports = router;
