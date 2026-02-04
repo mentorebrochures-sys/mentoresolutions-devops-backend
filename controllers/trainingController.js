@@ -2,7 +2,11 @@ const supabase = require("../supabaseClient");
 
 exports.getTrainings = async (req, res) => {
   try {
-    const { data, error } = await supabase.from("trainings").select("*").order("id", { ascending: true });
+    const { data, error } = await supabase
+      .from("trainings")
+      .select("*")
+      .order("id", { ascending: true });
+
     if (error) throw error;
     res.json(data);
   } catch (err) {
@@ -14,7 +18,16 @@ exports.getTrainings = async (req, res) => {
 exports.addTraining = async (req, res) => {
   try {
     const { icon, name } = req.body;
-    const { data, error } = await supabase.from("trainings").insert([{ icon, name }]);
+
+    if (!icon || !name) {
+      return res.status(400).json({ message: "Icon and name are required" });
+    }
+
+    const { data, error } = await supabase
+      .from("trainings")
+      .insert([{ icon, name }])
+      .select();
+
     if (error) throw error;
     res.status(201).json(data[0]);
   } catch (err) {
@@ -27,7 +40,17 @@ exports.updateTraining = async (req, res) => {
   try {
     const { id } = req.params;
     const { icon, name } = req.body;
-    const { data, error } = await supabase.from("trainings").update({ icon, name }).eq("id", id);
+
+    if (!icon || !name) {
+      return res.status(400).json({ message: "Icon and name are required" });
+    }
+
+    const { data, error } = await supabase
+      .from("trainings")
+      .update({ icon, name })
+      .eq("id", id)
+      .select();
+
     if (error) throw error;
     res.json(data[0] || { message: "Not found" });
   } catch (err) {
@@ -39,7 +62,12 @@ exports.updateTraining = async (req, res) => {
 exports.deleteTraining = async (req, res) => {
   try {
     const { id } = req.params;
-    const { data, error } = await supabase.from("trainings").delete().eq("id", id);
+
+    const { error } = await supabase
+      .from("trainings")
+      .delete()
+      .eq("id", id);
+
     if (error) throw error;
     res.json({ message: "Deleted successfully" });
   } catch (err) {
