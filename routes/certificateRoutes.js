@@ -1,6 +1,5 @@
-// routes/certificateRoutes.js
 const express = require("express");
-const upload = require("../multer");
+const upload = require("../multer"); // ← correct path to utils/multer.js
 const controller = require("../controllers/certificateController");
 
 const router = express.Router();

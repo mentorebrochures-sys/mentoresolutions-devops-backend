@@ -1,10 +1,7 @@
 const multer = require("multer");
 
-const storage = multer.memoryStorage();
+const storage = multer.memoryStorage(); // store files in memory for Supabase upload
 
-const upload = multer({
-  storage,
-  limits: { fileSize: 5 * 1024 * 1024 } // 5MB max
-});
+const upload = multer({ storage });
 
 module.exports = upload;
