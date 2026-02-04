@@ -1,22 +1,44 @@
 const supabase = require('../supabaseClient');
 
+// 1. Sagle Trainings milavne
 exports.getAll = async (req, res) => {
-    const { data, error } = await supabase.from('trainings').select('*');
-    res.json(error ? { error: error.message } : data);
+    const { data, error } = await supabase
+        .from('trainings')
+        .select('*');
+    
+    if (error) return res.status(400).json({ error: error.message });
+    res.json(data);
 };
 
+// 2. Navin Training (Icon Class sobat) add karne
 exports.create = async (req, res) => {
     try {
-        const fileName = `icon_${Date.now()}`;
-        await supabase.storage.from(process.env.TRAINING_BUCKET).upload(fileName, req.file.buffer);
-        const { data: url } = supabase.storage.from(process.env.TRAINING_BUCKET).getPublicUrl(fileName);
+        const { name, icon } = req.body; // Multer chi garaj nahi, direct body madhun data yeil
 
-        const { data, error } = await supabase.from('trainings').insert([{ name: req.body.name, icon: url.publicUrl }]);
-        res.status(201).json(error ? { error: error.message } : data);
-    } catch (err) { res.status(500).json({ error: err.message }); }
+        if (!name || !icon) {
+            return res.status(400).json({ error: "Name and Icon are required!" });
+        }
+
+        const { data, error } = await supabase
+            .from('trainings')
+            .insert([{ name, icon }])
+            .select();
+
+        if (error) return res.status(400).json({ error: error.message });
+        
+        res.status(201).json(data);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 };
 
+// 3. Training Delete karne
 exports.delete = async (req, res) => {
-    await supabase.from('trainings').delete().eq('id', req.params.id);
-    res.json({ message: "Deleted" });
+    const { error } = await supabase
+        .from('trainings')
+        .delete()
+        .eq('id', req.params.id);
+
+    if (error) return res.status(400).json({ error: error.message });
+    res.json({ message: "Deleted Successfully" });
 };
