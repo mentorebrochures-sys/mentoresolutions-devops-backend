@@ -4,16 +4,7 @@ require('dotenv').config();
 
 const app = express();
 
-const allowedOrigins = [
-  "https://mentoresolutions-devops-adminpanel.vercel.app", // Tuza Admin Panel
-  "https://mentoresolutions-devops-userpanel.vercel.app"   // Tuza User Panel (Website URL)
-];
-
-app.use(cors({
-  origin: "*", // Kontyahi website varun request ali tri backend accept karel
-  methods: ["GET", "POST", "PUT", "DELETE"],
-  allowedHeaders: ["Content-Type", "Authorization"]
-}));
+app.use(cors());
 app.use(express.json());
 
 // Routes
