@@ -1,14 +1,12 @@
 const supabase = require('../supabaseClient');
 
-// ---------------------------------------------------------
-// 1. GET ALL PLACEMENTS (Read)
-// ---------------------------------------------------------
+// 1. GET ALL PLACEMENTS
 exports.getAll = async (req, res) => {
     try {
         const { data, error } = await supabase
             .from('placements')
             .select('*')
-            .order('created_at', { ascending: false });
+            .order('id', { ascending: false });
 
         if (error) throw error;
         res.status(200).json(data);
@@ -17,76 +15,74 @@ exports.getAll = async (req, res) => {
     }
 };
 
-// ---------------------------------------------------------
-// 2. CREATE PLACEMENT (Create)
-// ---------------------------------------------------------
+// 2. CREATE PLACEMENT
 exports.create = async (req, res) => {
     try {
         const { name, role, company, pkg } = req.body;
-        
-        if (!req.file) {
-            return res.status(400).json({ error: "Student image is required" });
-        }
+        if (!req.file) return res.status(400).json({ error: "Image is required" });
 
-        const bucketName = 'placement-images'; // Supabase Bucket Name
-        const fileName = `student_${Date.now()}_${req.file.originalname}`;
+        const bucketName = process.env.PLACEMENT_BUCKET; 
+        const fileName = `student_${Date.now()}_${req.file.originalname.replace(/\s/g, '_')}`;
 
-        // Step 1: Upload image to Supabase Storage
-        const { error: uploadError } = await supabase.storage
+        // Step 1: Upload to Supabase Storage
+        const { error: upErr } = await supabase.storage
             .from(bucketName)
-            .upload(fileName, req.file.buffer, {
+            .upload(fileName, req.file.buffer, { 
                 contentType: req.file.mimetype,
-                upsert: true
+                upsert: false 
             });
 
-        if (uploadError) throw uploadError;
+        if (upErr) throw upErr;
 
-        // Step 2: Get Public URL of the uploaded image
-        const { data: urlData } = supabase.storage
-            .from(bucketName)
-            .getPublicUrl(fileName);
+        // Step 2: Get Public URL
+        const { data: urlData } = supabase.storage.from(bucketName).getPublicUrl(fileName);
 
-        const imageUrl = urlData.publicUrl;
-
-        // Step 3: Insert data into Database Table
-        const { data, error: dbError } = await supabase
+        // Step 3: Insert into Table
+        const { data, error: dbErr } = await supabase
             .from('placements')
-            .insert([{ name, role, company, pkg, image: imageUrl }])
+            .insert([{ name, role, company, pkg, image: urlData.publicUrl }])
             .select();
 
-        if (dbError) throw dbError;
-        res.status(201).json({ message: "Placement added!", data: data[0] });
-
+        if (dbErr) throw dbErr;
+        res.status(201).json(data[0]);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 };
 
-// ---------------------------------------------------------
-// 3. UPDATE PLACEMENT (Update)
-// ---------------------------------------------------------
+// 3. UPDATE PLACEMENT
 exports.update = async (req, res) => {
     try {
         const { id } = req.params;
         const { name, role, company, pkg } = req.body;
-        let imageUrl = req.body.image; // Juni image URL (jar navin upload nahi keli tar)
+        let imageUrl = req.body.image; 
+        const bucketName = process.env.PLACEMENT_BUCKET;
 
-        // Jar navin image file aali asel tar
+        // जर नवीन फाईल अपलोड केली असेल तर
         if (req.file) {
-            const bucketName = 'placement-images';
-            const fileName = `student_${Date.now()}_${req.file.originalname}`;
+            // १. जुनी इमेज मिळवून ती डिलीट करा (Optional but Recommended)
+            const { data: oldRecord } = await supabase
+                .from('placements')
+                .select('image')
+                .eq('id', id)
+                .single();
 
+            if (oldRecord && oldRecord.image) {
+                const oldFileName = oldRecord.image.split('/').pop();
+                await supabase.storage.from(bucketName).remove([oldFileName]);
+            }
+
+            // २. नवीन इमेज अपलोड करा
+            const fileName = `student_${Date.now()}_${req.file.originalname.replace(/\s/g, '_')}`;
             const { error: upErr } = await supabase.storage
                 .from(bucketName)
                 .upload(fileName, req.file.buffer, { contentType: req.file.mimetype });
 
             if (upErr) throw upErr;
-
             const { data: urlData } = supabase.storage.from(bucketName).getPublicUrl(fileName);
             imageUrl = urlData.publicUrl;
         }
 
-        // Database update karne
         const { data, error } = await supabase
             .from('placements')
             .update({ name, role, company, pkg, image: imageUrl })
@@ -94,42 +90,46 @@ exports.update = async (req, res) => {
             .select();
 
         if (error) throw error;
-        res.status(200).json({ message: "Updated successfully", data: data[0] });
-
+        res.status(200).json(data[0]);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 };
 
-// ---------------------------------------------------------
-// 4. DELETE PLACEMENT (Delete)
-// ---------------------------------------------------------
+// 4. DELETE PLACEMENT
 exports.delete = async (req, res) => {
     try {
         const { id } = req.params;
-        const bucketName = 'placement-images';
+        const bucketName = process.env.PLACEMENT_BUCKET;
 
-        // Step 1: Database madhun image chi URL kadha (Storage madhun file delete karnyathi)
-        const { data: record } = await supabase
+        // १. प्रथम रेकॉर्ड मधून इमेज पाथ मिळवा
+        const { data: record, error: fetchErr } = await supabase
             .from('placements')
             .select('image')
             .eq('id', id)
             .single();
 
+        if (fetchErr) throw fetchErr;
+
+        // २. जर इमेज असेल तर स्टोरेज मधून डिलीट करा
         if (record && record.image) {
             const fileName = record.image.split('/').pop();
-            await supabase.storage.from(bucketName).remove([fileName]);
+            const { error: storageErr } = await supabase.storage
+                .from(bucketName)
+                .remove([fileName]);
+            
+            if (storageErr) console.error("Storage Delete Error:", storageErr.message);
         }
 
-        // Step 2: Database madhun row delete kara
-        const { error } = await supabase
+        // ३. आता डेटाबेसमधून रेकॉर्ड डिलीट करा
+        const { error: dbErr } = await supabase
             .from('placements')
             .delete()
             .eq('id', id);
 
-        if (error) throw error;
-        res.status(200).json({ message: "Placement deleted successfully" });
+        if (dbErr) throw dbErr;
 
+        res.status(200).json({ message: "Placement record and image deleted successfully" });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
