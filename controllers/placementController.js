@@ -18,7 +18,7 @@ exports.getAll = async (req, res) => {
 // 2. CREATE NEW PLACEMENT
 exports.create = async (req, res) => {
     try {
-        const { name, role, company, pkg } = req.body; // Package badalun pkg kela
+        const { name, role, company, pkg } = req.body; 
 
         if (!req.file) {
             return res.status(400).json({ error: "Image file is missing!" });
@@ -26,7 +26,7 @@ exports.create = async (req, res) => {
 
         const fileName = `${Date.now()}_${req.file.originalname}`;
         
-        // Storage upload
+        // STORAGE: Upload Image
         const { error: uploadError } = await supabase.storage
             .from(process.env.PLACEMENT_BUCKET)
             .upload(fileName, req.file.buffer, {
@@ -36,13 +36,14 @@ exports.create = async (req, res) => {
 
         if (uploadError) throw uploadError;
 
+        // Get Public URL
         const { data: urlData } = supabase.storage
             .from(process.env.PLACEMENT_BUCKET)
             .getPublicUrl(fileName);
 
         const publicUrl = urlData.publicUrl;
 
-        // Database entry (pkg column use kela aahe)
+        // DATABASE: Insert Record
         const { data, error: dbError } = await supabase
             .from('placements')
             .insert([{ name, role, company, pkg, image: publicUrl }])
@@ -50,7 +51,7 @@ exports.create = async (req, res) => {
 
         if (dbError) throw dbError;
 
-        res.status(201).json({ message: "Placement created!", data: data[0] });
+        res.status(201).json({ message: "Placement created successfully!", data: data[0] });
 
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -61,7 +62,7 @@ exports.create = async (req, res) => {
 exports.update = async (req, res) => {
     try {
         const { id } = req.params;
-        const { name, role, company, pkg } = req.body; // Pkg variable use kela
+        const { name, role, company, pkg } = req.body;
 
         const { data: existingData, error: fetchError } = await supabase
             .from('placements')
@@ -76,13 +77,13 @@ exports.update = async (req, res) => {
         let imageUrl = existingData.image;
 
         if (req.file) {
-            // Juni file delete kara
+            // Delete old file
             const oldFileName = existingData.image.split('/').pop();
             await supabase.storage
                 .from(process.env.PLACEMENT_BUCKET)
                 .remove([oldFileName]);
 
-            // Navin upload
+            // Upload new file
             const newFileName = `${Date.now()}_${req.file.originalname}`;
             const { error: uploadError } = await supabase.storage
                 .from(process.env.PLACEMENT_BUCKET)
@@ -100,7 +101,7 @@ exports.update = async (req, res) => {
             imageUrl = urlData.publicUrl;
         }
 
-        // Database update
+        // Database Update
         const { data, error: dbError } = await supabase
             .from('placements')
             .update({ name, role, company, pkg, image: imageUrl })
@@ -109,7 +110,7 @@ exports.update = async (req, res) => {
 
         if (dbError) throw dbError;
 
-        res.status(200).json({ message: "Placement updated!", data: data[0] });
+        res.status(200).json({ message: "Placement updated successfully!", data: data[0] });
 
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -143,7 +144,7 @@ exports.delete = async (req, res) => {
 
         if (dbError) throw dbError;
 
-        res.status(200).json({ message: "Placement deleted successfully" });
+        res.status(200).json({ message: "Placement and image deleted successfully" });
 
     } catch (err) {
         res.status(500).json({ error: err.message });
