@@ -1,12 +1,14 @@
 const supabase = require('../supabaseClient');
 
-// 1. GET ALL PLACEMENTS
+// ---------------------------------------------------------
+// 1. GET ALL PLACEMENTS (Read)
+// ---------------------------------------------------------
 exports.getAll = async (req, res) => {
     try {
         const { data, error } = await supabase
             .from('placements')
             .select('*')
-            .order('id', { ascending: false });
+            .order('created_at', { ascending: false });
 
         if (error) throw error;
         res.status(200).json(data);
@@ -15,20 +17,23 @@ exports.getAll = async (req, res) => {
     }
 };
 
-// 2. CREATE NEW PLACEMENT
+// ---------------------------------------------------------
+// 2. CREATE PLACEMENT (Create)
+// ---------------------------------------------------------
 exports.create = async (req, res) => {
     try {
-        const { name, role, company, pkg } = req.body; 
-
+        const { name, role, company, pkg } = req.body;
+        
         if (!req.file) {
-            return res.status(400).json({ error: "Image file is missing!" });
+            return res.status(400).json({ error: "Student image is required" });
         }
 
-        const fileName = `${Date.now()}_${req.file.originalname}`;
-        
-        // STORAGE: Upload Image
+        const bucketName = 'placement-images'; // Supabase Bucket Name
+        const fileName = `student_${Date.now()}_${req.file.originalname}`;
+
+        // Step 1: Upload image to Supabase Storage
         const { error: uploadError } = await supabase.storage
-            .from(process.env.PLACEMENT_BUCKET)
+            .from(bucketName)
             .upload(fileName, req.file.buffer, {
                 contentType: req.file.mimetype,
                 upsert: true
@@ -36,115 +41,94 @@ exports.create = async (req, res) => {
 
         if (uploadError) throw uploadError;
 
-        // Get Public URL
+        // Step 2: Get Public URL of the uploaded image
         const { data: urlData } = supabase.storage
-            .from(process.env.PLACEMENT_BUCKET)
+            .from(bucketName)
             .getPublicUrl(fileName);
 
-        const publicUrl = urlData.publicUrl;
+        const imageUrl = urlData.publicUrl;
 
-        // DATABASE: Insert Record
+        // Step 3: Insert data into Database Table
         const { data, error: dbError } = await supabase
             .from('placements')
-            .insert([{ name, role, company, pkg, image: publicUrl }])
+            .insert([{ name, role, company, pkg, image: imageUrl }])
             .select();
 
         if (dbError) throw dbError;
-
-        res.status(201).json({ message: "Placement created successfully!", data: data[0] });
+        res.status(201).json({ message: "Placement added!", data: data[0] });
 
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 };
 
-// 3. UPDATE PLACEMENT
+// ---------------------------------------------------------
+// 3. UPDATE PLACEMENT (Update)
+// ---------------------------------------------------------
 exports.update = async (req, res) => {
     try {
         const { id } = req.params;
         const { name, role, company, pkg } = req.body;
+        let imageUrl = req.body.image; // Juni image URL (jar navin upload nahi keli tar)
 
-        const { data: existingData, error: fetchError } = await supabase
-            .from('placements')
-            .select('image')
-            .eq('id', id)
-            .single();
-
-        if (fetchError || !existingData) {
-            return res.status(404).json({ error: "Placement not found!" });
-        }
-
-        let imageUrl = existingData.image;
-
+        // Jar navin image file aali asel tar
         if (req.file) {
-            // Delete old file
-            const oldFileName = existingData.image.split('/').pop();
-            await supabase.storage
-                .from(process.env.PLACEMENT_BUCKET)
-                .remove([oldFileName]);
+            const bucketName = 'placement-images';
+            const fileName = `student_${Date.now()}_${req.file.originalname}`;
 
-            // Upload new file
-            const newFileName = `${Date.now()}_${req.file.originalname}`;
-            const { error: uploadError } = await supabase.storage
-                .from(process.env.PLACEMENT_BUCKET)
-                .upload(newFileName, req.file.buffer, {
-                    contentType: req.file.mimetype,
-                    upsert: true
-                });
+            const { error: upErr } = await supabase.storage
+                .from(bucketName)
+                .upload(fileName, req.file.buffer, { contentType: req.file.mimetype });
 
-            if (uploadError) throw uploadError;
+            if (upErr) throw upErr;
 
-            const { data: urlData } = supabase.storage
-                .from(process.env.PLACEMENT_BUCKET)
-                .getPublicUrl(newFileName);
-            
+            const { data: urlData } = supabase.storage.from(bucketName).getPublicUrl(fileName);
             imageUrl = urlData.publicUrl;
         }
 
-        // Database Update
-        const { data, error: dbError } = await supabase
+        // Database update karne
+        const { data, error } = await supabase
             .from('placements')
             .update({ name, role, company, pkg, image: imageUrl })
             .eq('id', id)
             .select();
 
-        if (dbError) throw dbError;
-
-        res.status(200).json({ message: "Placement updated successfully!", data: data[0] });
+        if (error) throw error;
+        res.status(200).json({ message: "Updated successfully", data: data[0] });
 
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 };
 
-// 4. DELETE PLACEMENT
+// ---------------------------------------------------------
+// 4. DELETE PLACEMENT (Delete)
+// ---------------------------------------------------------
 exports.delete = async (req, res) => {
     try {
         const { id } = req.params;
+        const bucketName = 'placement-images';
 
-        const { data: record, error: fetchError } = await supabase
+        // Step 1: Database madhun image chi URL kadha (Storage madhun file delete karnyathi)
+        const { data: record } = await supabase
             .from('placements')
             .select('image')
             .eq('id', id)
             .single();
 
-        if (fetchError || !record) {
-            return res.status(404).json({ error: "Record not found!" });
+        if (record && record.image) {
+            const fileName = record.image.split('/').pop();
+            await supabase.storage.from(bucketName).remove([fileName]);
         }
 
-        const fileName = record.image.split('/').pop();
-        await supabase.storage
-            .from(process.env.PLACEMENT_BUCKET)
-            .remove([fileName]);
-
-        const { error: dbError } = await supabase
+        // Step 2: Database madhun row delete kara
+        const { error } = await supabase
             .from('placements')
             .delete()
             .eq('id', id);
 
-        if (dbError) throw dbError;
-
-        res.status(200).json({ message: "Placement and image deleted successfully" });
+        if (error) throw error;
+        res.status(200).json({ message: "Placement deleted successfully" });
 
     } catch (err) {
         res.status(500).json({ error: err.message });
