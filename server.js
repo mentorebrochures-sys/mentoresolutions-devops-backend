@@ -13,6 +13,10 @@ app.use('/api/contacts', require('./routes/contactRoutes'));
 app.use('/api/courses', require('./routes/courseRoutes'));
 app.use('/api/placements', require('./routes/placementRoutes'));
 app.use('/api/trainings', require('./routes/trainingRoutes'));
+// --- NEW PAP POLICY ROUTE ADDED HERE ---
+app.use('/api/pap-steps', require('./routes/papRoutes'));
+
+
 
 app.get('/', (req, res) => {
     res.json({ message: "Backend is running!" });
